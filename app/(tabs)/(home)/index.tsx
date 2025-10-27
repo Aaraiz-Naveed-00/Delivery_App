@@ -13,6 +13,8 @@ const Categories = () => {
   const [loading, setLoading] = useState(true);
   const { colors } = useTheme();
 
+  
+
   const onBackPress = () => router.back();
 
   useEffect(() => {
@@ -67,7 +69,7 @@ const Categories = () => {
             onPress={() =>
               router.push({
                 pathname: "/CategoryDetail",
-                params: { title: item.name },
+                params: { title: item.name, categoryId: item._id },
               })
             }
           />

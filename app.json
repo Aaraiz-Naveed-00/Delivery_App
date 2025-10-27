@@ -61,6 +61,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bf137e10-6faa-453e-abb1-acc028276086"
+      }
+    },
+    "owner": "aaraiz007"
   }
 }

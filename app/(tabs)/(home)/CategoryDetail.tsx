@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, FlatList, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
 import { Chip } from "react-native-paper";
 import axios from "axios";
 import BackButton from "@/assets/components/BackButton";
@@ -11,8 +18,9 @@ import { useTheme } from "@/assets/context/ThemeContext";
 
 // ------------------ TYPES ------------------
 type CategoryItem = {
+  _id: string;
   name: string;
-  count: number;
+
 };
 
 type ProductItem = {
@@ -20,79 +28,83 @@ type ProductItem = {
   name: string;
   price: string;
   category: string;
-  image: string; // will come as URL from backend
+  image: string;
 };
 // --------------------------------------------
 
 const CategoryDetail = () => {
-  const { title } = useLocalSearchParams();
+  const { title, categoryId } = useLocalSearchParams();
   const { addToCart } = useCart();
   const { colors } = useTheme();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ---------------- FETCH PRODUCTS & CATEGORIES ----------------
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Replace with your deployed/local backend URL
-        const baseURL = "http://192.168.18.82:5000/api"; 
+  const baseURL = "http://192.168.18.82:5000/api";
 
-        const [productsRes, categoriesRes] = await Promise.all([
-          axios.get(`${baseURL}/products`),
-          axios.get(`${baseURL}/categories`),
-        ]);
+  // ---------------- FETCH CATEGORIES ----------------
+ useEffect(() => {
+  const fetchCategories = async () => {
+    try {
+      const res = await axios.get(`${baseURL}/categories`);
+      setCategories(res.data);
 
-        setProducts(productsRes.data);
+      // ✅ Normalize categoryId (convert to string if it's an array)
+      const normalizedId = Array.isArray(categoryId) ? categoryId[0] : categoryId;
 
-        // Map categories with product counts
-        const categoryCounts = categoriesRes.data.map((cat: any) => ({
-          name: cat.name,
-          count: productsRes.data.filter((p: any) => p.category === cat.name).length,
-        }));
-
-        setCategories(categoryCounts);
-
-        // Default select first category
-        if (categoryCounts.length > 0) {
-          setSelectedCategory(categoryCounts[0].name);
-        }
-
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching products:", error);
-        setLoading(false);
+      // ✅ Use the passed categoryId if available
+      if (normalizedId) {
+        setSelectedCategoryId(normalizedId);
+        await fetchProductsByCategory(normalizedId);
+      } else if (res.data.length > 0) {
+        // fallback to first category if no ID passed
+        const firstCategoryId = res.data[0]._id;
+        setSelectedCategoryId(firstCategoryId);
+        await fetchProductsByCategory(firstCategoryId);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    fetchData();
-  }, []);
+  fetchCategories();
+}, [categoryId]);
 
-  // ---------------- FILTER PRODUCTS ----------------
-  const filteredItems = products.filter(
-    (item) =>
-      item.category === selectedCategory &&
-      item.name.toLowerCase().includes(searchQuery.toLowerCase())
+
+  // ---------------- FETCH PRODUCTS BY CATEGORY ----------------
+  const fetchProductsByCategory = async (categoryId: string) => {
+  if (!categoryId) return; // ✅ Prevents empty request if categoryId not yet loaded
+  try {
+    setLoading(true);
+    const res = await axios.get(
+      `${baseURL}/products/filter?categoryId=${categoryId}`
+    );
+    setProducts(res.data);
+  } catch (error) {
+    console.error("Error fetching products:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+  // ---------------- FILTER BY SEARCH ----------------
+  const filteredItems = products.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const onPressHeart = () => {};
-  const onPressCart = (item: ProductItem) => addToCart({
-    ...item, quantity: 1,
-    id: item._id
-  });
+  const onPressCart = (item: ProductItem) =>
+    addToCart({ ...item, quantity: 1, id: item._id });
+
   const onPressItem = (item: ProductItem) => {
     router.push({
       pathname: "/(tabs)/(home)/ItemDetails",
       params: {
-        id: item._id,
-        name: item.name,
-        price: item.price,
-        image: item.image,
-        category: item.category,
+        _id: item._id, // ✅ Pass _id for ItemDetails to match
       },
     });
   };
@@ -101,25 +113,26 @@ const CategoryDetail = () => {
 
   // ---------------- RENDER CATEGORY CHIPS ----------------
   const renderChip = ({ item }: { item: CategoryItem }) => {
-    const isSelected = item.name === selectedCategory;
+    const isSelected = item._id === selectedCategoryId;
     return (
       <Chip
-        key={item.name}
+        key={item._id}
         mode="flat"
         selected={isSelected}
-        onPress={() => setSelectedCategory(item.name)}
+        onPress={() => {
+          setSelectedCategoryId(item._id);
+          fetchProductsByCategory(item._id);
+        }}
         style={[
           styles.chip,
-          {
-            backgroundColor: isSelected ? colors.primary : colors.card,
-          },
+          { backgroundColor: isSelected ? colors.primary : colors.card },
         ]}
         textStyle={{
           color: isSelected ? "#FFFFFF" : colors.text,
           fontWeight: isSelected ? "600" : "500",
         }}
       >
-        {item.name} ({item.count})
+        {item.name}
       </Chip>
     );
   };
@@ -127,7 +140,16 @@ const CategoryDetail = () => {
   // ---------------- LOADING STATE ----------------
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background, justifyContent: "center", alignItems: "center" }]}>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: colors.background,
+            justifyContent: "center",
+            alignItems: "center",
+          },
+        ]}
+      >
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -140,8 +162,13 @@ const CategoryDetail = () => {
         <BackButton onPress={onBackPress} />
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
 
-        <CustomSearchBar placeholder="Search" onChangeText={setSearchQuery} value={searchQuery} />
+        <CustomSearchBar
+          placeholder="Search"
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+        />
 
+        {/* ✅ Category Chips */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -162,22 +189,35 @@ const CategoryDetail = () => {
         </ScrollView>
 
         {/* ✅ Product List */}
-        <FlatList
-          data={filteredItems}
-          keyExtractor={(item) => item._id}
-          renderItem={({ item }) => (
-            <ItemList
-              image={{ uri: item.image }}
-              name={item.name}
-              price={`${item.price} €`}
-              onPressHeart={onPressHeart}
-              onPressCart={() => onPressCart(item)}
-              onPressItem={() => onPressItem(item)}
-            />
-          )}
-          contentContainerStyle={styles.itemsListContainer}
-          scrollEnabled={false}
-        />
+        {filteredItems.length === 0 ? (
+          <Text
+            style={{
+              color: colors.text,
+              textAlign: "center",
+              marginTop: 30,
+              fontSize: 16,
+            }}
+          >
+            No products found for this category.
+          </Text>
+        ) : (
+          <FlatList
+            data={filteredItems}
+            keyExtractor={(item) => item._id}
+            renderItem={({ item }) => (
+              <ItemList
+                image={{ uri: item.image }}
+                name={item.name}
+                price={`${item.price} €`}
+                onPressHeart={onPressHeart}
+                onPressCart={() => onPressCart(item)}
+                onPressItem={() => onPressItem(item)}
+              />
+            )}
+            contentContainerStyle={styles.itemsListContainer}
+            scrollEnabled={false}
+          />
+        )}
       </ScrollView>
     </View>
   );

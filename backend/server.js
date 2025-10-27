@@ -15,27 +15,38 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ✅ These lines replicate __dirname in ES modules
+// ✅ Replicate __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Firebase setup (replace your old block with this)
+// ✅ Firebase setup (Safe initialization)
 const serviceAccountPath = path.resolve(__dirname, process.env.FIREBASE_CREDENTIALS);
 const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, "utf8"));
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount), 
-});
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+  console.log("🔥 Firebase initialized successfully");
+} else {
+  console.log("⚙️ Firebase app already initialized");
+}
 
 // ✅ MongoDB connection
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.log("❌ MongoDB Error:", err));
+  .catch((err) => console.error("❌ MongoDB connection error:", err));
 
 // ✅ Routes
 app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 
+// ✅ Default route
+app.get("/", (req, res) => {
+  res.send("🚀 API is running...");
+});
+
 // ✅ Server start
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🌍 Server running on port ${PORT}`));
