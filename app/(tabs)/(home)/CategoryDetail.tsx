@@ -43,7 +43,7 @@ const CategoryDetail = () => {
   const [products, setProducts] = useState<ProductItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const baseURL = "http://192.168.18.82:5000/api";
+  const baseURL = "http://192.168.18.71:5000/api";
 
   // ---------------- FETCH CATEGORIES ----------------
  useEffect(() => {

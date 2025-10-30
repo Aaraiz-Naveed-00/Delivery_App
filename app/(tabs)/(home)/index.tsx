@@ -20,7 +20,7 @@ const Categories = () => {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const baseURL = "http://192.168.18.82:5000/api";
+        const baseURL = "http://192.168.18.71:5000/api";
         const res = await axios.get(`${baseURL}/categories`);
         setCategories(res.data);
         setLoading(false);

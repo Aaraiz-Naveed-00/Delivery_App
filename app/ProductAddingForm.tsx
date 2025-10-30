@@ -17,41 +17,42 @@ import axios from "axios";
 import { Picker } from "@react-native-picker/picker";
 import { useTheme } from "@/assets/context/ThemeContext";
 
-// Your backend API
-const API_BASE = "http://192.168.18.82:5000/api";
+// ✅ Backend API Base URL
+const API_BASE = "http://192.168.18.71:5000/api";
 
-// Cloudinary credentials
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/duqffmi9a/upload";
-const CLOUDINARY_UPLOAD_PRESET = "Delivery_App"; // unsigned preset
+// ✅ Cloudinary Credentials
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/duqffmi9a/image/upload";
+const CLOUDINARY_UPLOAD_PRESET = "Delivery_App";
 
-const AddItemsScreen = () => {
+const AddItemsScreen: React.FC = () => {
   const { colors } = useTheme();
-  const [activeTab, setActiveTab] = useState<"category" | "product">("category");
 
+  const [activeTab, setActiveTab] = useState<"category" | "product">("category");
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
-  // Category states
+  // Category
   const [categoryName, setCategoryName] = useState("");
 
-  // Product states
+  // Product
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [subCategory, setSubCategory] = useState("");
   const [productWeight, setProductWeight] = useState("");
   const [productDescription, setProductDescription] = useState("");
-  const [categories, setCategories] = useState<any[]>([]);
+
+  const [categories, setCategories] = useState<{ _id: string; name: string }[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // ✅ Fetch categories for dropdown
+  // ✅ Fetch categories
   useEffect(() => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get(`${API_BASE}/categories`);
         setCategories(res.data);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
+      } catch (err) {
+        console.error("Error fetching categories:", err);
         Alert.alert("Error", "Failed to fetch categories.");
       } finally {
         setLoadingCategories(false);
@@ -60,45 +61,49 @@ const AddItemsScreen = () => {
     fetchCategories();
   }, []);
 
-  // ✅ Pick & upload image
+  // ✅ Pick and Upload Image to Cloudinary
   const pickAndUploadImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert("Permission denied", "We need access to your photos to continue.");
-      return;
-    }
-
     try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert("Permission denied", "Please allow access to photos.");
+        return;
+      }
+
       const result = await ImagePicker.launchImageLibraryAsync({
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
-      if (!result.canceled && result.assets?.length > 0) {
-        let uri = result.assets[0].uri;
+      if (result.canceled || !result.assets?.length) {
+        Alert.alert("No image selected");
+        return;
+      }
 
-        if (Platform.OS === "android" && uri.startsWith("content://")) {
-          const FS: any = FileSystem;
+      let uri = result.assets[0].uri;
+
+      // ✅ Fix Android "content://" URI
+      if (Platform.OS === "android" && uri.startsWith("content://")) {
+       const FS: any = FileSystem;
           const cacheDir = FS.documentDirectory;
           const fileUri = `${cacheDir}temp_${Date.now()}.jpg`;
           await FS.copyAsync({ from: uri, to: fileUri });
           uri = fileUri;
-        }
-
-        const uploadedUrl = await uploadToCloudinary(uri);
+      }
+      const uploadedUrl = await uploadToCloudinary(uri);
+      if (uploadedUrl) {
         setImageUri(uploadedUrl);
-        Alert.alert("✅ Image uploaded!", "Image hosted on Cloudinary");
-      } else {
-        Alert.alert("No image selected");
+        Alert.alert("✅ Image Uploaded!", "Image hosted on Cloudinary");
       }
     } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to pick or upload image");
+      console.error("Image upload error:", err);
+      Alert.alert("Error", "Failed to pick or upload image.");
     }
   };
 
-  const uploadToCloudinary = async (uri: string) => {
+  // ✅ Upload to Cloudinary
+  const uploadToCloudinary = async (uri: string): Promise<string | null> => {
     setUploading(true);
     try {
       const formData = new FormData();
@@ -116,7 +121,7 @@ const AddItemsScreen = () => {
       return response.data.secure_url;
     } catch (err) {
       console.error("Cloudinary upload error:", err);
-      Alert.alert("Upload Failed", "Failed to upload image to Cloudinary");
+      Alert.alert("Upload Failed", "Could not upload image to Cloudinary.");
       return null;
     } finally {
       setUploading(false);
@@ -131,63 +136,76 @@ const AddItemsScreen = () => {
     }
 
     try {
-      await axios.post(`${API_BASE}/categories`, { name: categoryName, image: imageUri });
-      Alert.alert("Success", "Category added!");
+      await axios.post(`${API_BASE}/categories`, {
+        name: categoryName,
+        image: imageUri,
+      });
+
+      Alert.alert("✅ Success", "Category added successfully!");
       setCategoryName("");
       setImageUri(null);
     } catch (err) {
-      console.error(err);
+      console.error("Add Category Error:", err);
       Alert.alert("Error", "Failed to add category.");
     }
   };
 
   // ✅ Add Product
   const handleAddProduct = async () => {
-    if (!productName || !productPrice || !selectedCategoryId || !subCategory || !imageUri) {
+  
+    if (!productName || !productPrice || !categoryId || !subCategory || !imageUri) {
       Alert.alert("Missing Fields", "Please complete all fields and upload an image.");
       return;
     }
+    console.log("🧾 Product data being sent:", {
+      name: productName,
+      price: productPrice,
+      categoryId,
+      image: imageUri,
+      mainCategory: "General",
+      subCategory,
+      weight: productWeight,
+      description: productDescription,
+    });
 
     try {
       await axios.post(`${API_BASE}/products`, {
         name: productName,
         price: productPrice,
-        categoryId: selectedCategoryId,
-        subCategory,
+        categoryId, // ✅ Correct key expected by backend
         image: imageUri,
-        weight: productWeight,
-        description: productDescription || "There is no description for this product.",
+        mainCategory: "General", // ✅ optional field — you can change as needed
+        subCategory,
+         weight: productWeight || "N/A",
+          description: productDescription || "No description provided.",
       });
 
       Alert.alert("✅ Success", "Product added successfully!");
       setProductName("");
       setProductPrice("");
-      setSelectedCategoryId("");
+      setCategoryId("");
       setSubCategory("");
       setProductWeight("");
       setProductDescription("");
       setImageUri(null);
-    } catch (err) {
-      console.error(err);
-      Alert.alert("Error", "Failed to add product.");
+    } catch (err: any) {
+      console.error("Error adding product:", err.response?.data || err);
+      Alert.alert("Error", err.response?.data?.message || "Failed to add product.");
     }
   };
 
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
-      contentContainerStyle={{ paddingBottom: 80 }}
+      contentContainerStyle={{ paddingBottom: 40 }}
     >
-      {/* Tab Switch */}
+      {/* 🔹 Tabs */}
       <View style={styles.tabContainer}>
         <TouchableOpacity
           onPress={() => setActiveTab("category")}
           style={[
             styles.tabButton,
-            {
-              backgroundColor: activeTab === "category" ? colors.primary : "transparent",
-              borderColor: colors.border,
-            },
+            { backgroundColor: activeTab === "category" ? colors.primary : "transparent", borderColor: colors.border },
           ]}
         >
           <Text style={[styles.tabText, { color: activeTab === "category" ? "#FFF" : colors.text }]}>
@@ -199,10 +217,7 @@ const AddItemsScreen = () => {
           onPress={() => setActiveTab("product")}
           style={[
             styles.tabButton,
-            {
-              backgroundColor: activeTab === "product" ? colors.primary : "transparent",
-              borderColor: colors.border,
-            },
+            { backgroundColor: activeTab === "product" ? colors.primary : "transparent", borderColor: colors.border },
           ]}
         >
           <Text style={[styles.tabText, { color: activeTab === "product" ? "#FFF" : colors.text }]}>
@@ -211,7 +226,7 @@ const AddItemsScreen = () => {
         </TouchableOpacity>
       </View>
 
-      {/* Image Picker */}
+      {/* 🔹 Image Picker */}
       <TouchableOpacity style={styles.imagePicker} onPress={pickAndUploadImage}>
         {uploading ? (
           <ActivityIndicator color={colors.primary} />
@@ -222,7 +237,7 @@ const AddItemsScreen = () => {
         )}
       </TouchableOpacity>
 
-      {/* Category Form */}
+      {/* 🔹 Category Form */}
       {activeTab === "category" && (
         <View>
           <TextInput
@@ -232,6 +247,7 @@ const AddItemsScreen = () => {
             value={categoryName}
             onChangeText={setCategoryName}
           />
+
           <TouchableOpacity
             style={[styles.submitButton, { backgroundColor: colors.primary }]}
             onPress={handleAddCategory}
@@ -241,7 +257,7 @@ const AddItemsScreen = () => {
         </View>
       )}
 
-      {/* Product Form */}
+      {/* 🔹 Product Form */}
       {activeTab === "product" && (
         <View>
           <TextInput
@@ -251,6 +267,7 @@ const AddItemsScreen = () => {
             value={productName}
             onChangeText={setProductName}
           />
+
           <TextInput
             style={[styles.input, { borderColor: colors.border, color: colors.text }]}
             placeholder="Price"
@@ -260,16 +277,11 @@ const AddItemsScreen = () => {
             onChangeText={setProductPrice}
           />
 
-          {/* Category Dropdown */}
           {loadingCategories ? (
             <ActivityIndicator color={colors.primary} style={{ marginVertical: 10 }} />
           ) : (
             <View style={[styles.pickerContainer, { borderColor: colors.border }]}>
-              <Picker
-                selectedValue={selectedCategoryId}
-                onValueChange={(value) => setSelectedCategoryId(value)}
-                style={{ color: colors.text }}
-              >
+              <Picker selectedValue={categoryId} onValueChange={(v) => setCategoryId(v)} style={{ color: colors.text }}>
                 <Picker.Item label="Select Category" value="" />
                 {categories.map((cat) => (
                   <Picker.Item key={cat._id} label={cat.name} value={cat._id} />
@@ -288,23 +300,19 @@ const AddItemsScreen = () => {
 
           <TextInput
             style={[styles.input, { borderColor: colors.border, color: colors.text }]}
-            placeholder="Weight (e.g., ~150 gr / piece)"
+            placeholder="Weight (e.g., 1kg, 500g)"
             placeholderTextColor="#999"
             value={productWeight}
             onChangeText={setProductWeight}
           />
 
           <TextInput
-            style={[
-              styles.input,
-              styles.descriptionInput,
-              { borderColor: colors.border, color: colors.text },
-            ]}
+            style={[styles.input, { borderColor: colors.border, color: colors.text, height: 100 }]}
             placeholder="Product Description"
             placeholderTextColor="#999"
             value={productDescription}
-            onChangeText={setProductDescription}
             multiline
+            onChangeText={setProductDescription}
           />
 
           <TouchableOpacity
@@ -321,18 +329,10 @@ const AddItemsScreen = () => {
 
 export default AddItemsScreen;
 
-// ---------------- STYLES ----------------
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16 },
   tabContainer: { flexDirection: "row", justifyContent: "space-around", marginBottom: 20 },
-  tabButton: {
-    flex: 1,
-    marginHorizontal: 5,
-    borderWidth: 1,
-    borderRadius: 8,
-    alignItems: "center",
-    padding: 10,
-  },
+  tabButton: { flex: 1, marginHorizontal: 5, borderWidth: 1, borderRadius: 8, alignItems: "center", padding: 10 },
   tabText: { fontSize: 16, fontWeight: "600" },
   imagePicker: {
     height: 150,
@@ -344,23 +344,8 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   image: { width: "100%", height: "100%", borderRadius: 10 },
-  input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  pickerContainer: {
-    borderWidth: 1,
-    borderRadius: 10,
-    marginBottom: 12,
-    overflow: "hidden",
-  },
-  descriptionInput: {
-    height: 100,
-    textAlignVertical: "top",
-  },
+  input: { borderWidth: 1, borderRadius: 10, padding: 12, fontSize: 16, marginBottom: 12 },
+  pickerContainer: { borderWidth: 1, borderRadius: 10, marginBottom: 12, overflow: "hidden" },
   submitButton: { marginTop: 10, padding: 15, borderRadius: 10, alignItems: "center" },
   submitText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
 });

@@ -13,7 +13,8 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb", type: "application/json", defaultCharset: "utf-8" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 
 // ✅ Replicate __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);

@@ -56,7 +56,8 @@
         {
           "photosPermission": "Allow $(PRODUCT_NAME) to access your photos."
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true,
