@@ -15,7 +15,7 @@ const Categories = () => {
 
   
 
-  const onBackPress = () => router.back();
+  const onBackPress = () => router.navigate("../welcome");
 
   useEffect(() => {
     const fetchCategories = async () => {

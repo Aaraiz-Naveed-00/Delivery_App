@@ -8,6 +8,7 @@
     "scheme": "deliveryapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    
     "ios": {
       "supportsTablet": true
     },
@@ -25,7 +26,10 @@
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.anonymous.Delivery_App"
+
+      
     },
+    
     "web": {
       "output": "static",
       "favicon": "./assets/images/favicon.png"
@@ -66,7 +70,12 @@
     "extra": {
       "eas": {
         "projectId": "bf137e10-6faa-453e-abb1-acc028276086"
-      }
+      },
+      "notification": {
+        "validPublicKey": "BI5Ti3yMs8APLDqQHg8nyVNkjav2LHcxzCcjaKgyQIWv_6uzMGkurAHKvCBSY3RoabDviCoqbue3meBejo6TyZQ"
+      },
+      "EXPO_GOOGLE_CLIENT_ID": "process.env.EXPO_GOOGLE_CLIENT_ID",
+      "EXPO_FACEBOOK_APP_ID": "process.env.EXPO_FACEBOOK_APP_ID"
     },
     "owner": "aaraiz007"
   }

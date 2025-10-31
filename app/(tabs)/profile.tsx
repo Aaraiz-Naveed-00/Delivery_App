@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,69 +8,187 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import BackButton from "@/assets/components/BackButton";
-import { useProfile } from "@/assets/context/ProfileContext";
 import { useTheme } from "@/assets/context/ThemeContext";
 import { router } from "expo-router";
+import { auth, db } from "@/backend/config/firebaseConfig";
+import { ref, get, update } from "firebase/database";
+import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
+import Toast from "react-native-toast-message";
+import BackButton from "@/assets/components/BackButton";
+import { updateProfile } from "firebase/auth";
+
+// ✅ Cloudinary credentials
+const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/duqffmi9a/image/upload";
+const CLOUDINARY_UPLOAD_PRESET = "Delivery_App";
+
+// ✅ Define User type
+interface UserData {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  profileImage: string;
+}
 
 export default function ProfileScreen() {
-  const { name, email, phone, address, setProfileData, orders } = useProfile();
   const { colors } = useTheme();
 
+  const [userData, setUserData] = useState<UserData>({
+    name: "",
+    email: "",
+    phone: "",
+    address: "",
+    profileImage: "",
+  });
+
   const [isEditing, setIsEditing] = useState(false);
-  const [currentField, setCurrentField] = useState("");
   const [modalVisible, setModalVisible] = useState(false);
   const [inputValue, setInputValue] = useState("");
+  const [currentField, setCurrentField] = useState<keyof UserData | "">("");
 
-  const fadeAnim = new Animated.Value(1);
+  const user = auth.currentUser;
+  const userId = user?.uid;
 
-  const handleEditToggle = () => setIsEditing(!isEditing);
+  // ✅ Fetch data from Firebase Auth + Realtime DB
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (userId) {
+        const userRef = ref(db, `users/${userId}`);
+        const snapshot = await get(userRef);
+        const dbData = snapshot.exists() ? snapshot.val() : {};
 
-  const handleFieldEdit = (field: string, value: string) => {
+        setUserData({
+          name: user?.displayName || dbData.name || "User",
+          email: user?.email || dbData.email || "",
+          phone: dbData.phone || "",
+          address: dbData.address || "",
+          profileImage: user?.photoURL || dbData.profileImage || "",
+        });
+      }
+    };
+
+    fetchUserData();
+  }, [userId]);
+
+  // ✅ Handle profile field editing
+  const handleFieldEdit = (field: keyof UserData, value: string) => {
     setCurrentField(field);
     setInputValue(value);
     setModalVisible(true);
   };
 
-  const handleSave = () => {
-    setProfileData({
-      ...{ name, email, phone, address },
-      [currentField]: inputValue,
-    });
-    setModalVisible(false);
+  // ✅ Save profile field update
+  const handleSave = async () => {
+    if (!userId || !currentField) return;
+
+    try {
+      const userRef = ref(db, `users/${userId}`);
+      await update(userRef, { [currentField]: inputValue });
+
+      if (currentField === "name" && user) {
+        await updateProfile(user, { displayName: inputValue });
+      }
+
+      setUserData((prev) => ({ ...prev, [currentField]: inputValue }));
+      setModalVisible(false);
+
+      Toast.show({
+        type: "success",
+        text1: "Profile updated successfully",
+      });
+    } catch (err) {
+      Toast.show({
+        type: "error",
+        text1: "Failed to update profile",
+      });
+    }
   };
 
-  const onBackPress = () => router.back();
-  const goToSettings = () => router.push("/Setting");
+  // ✅ Upload and crop profile image to Cloudinary
+  const handleImageUpload = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Toast.show({ type: "error", text1: "Permission required" });
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled) {
+      const cropped = await ImageManipulator.manipulateAsync(
+        result.assets[0].uri,
+        [{ resize: { width: 400, height: 400 } }],
+        { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+      );
+
+      const formData = new FormData();
+      formData.append("file", {
+        uri: cropped.uri,
+        type: "image/jpeg",
+        name: "profile.jpg",
+      } as any);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+      const res = await fetch(CLOUDINARY_URL, {
+        method: "POST",
+        body: formData,
+      });
+
+      const response = await res.json();
+
+      if (response.secure_url) {
+        const imageUrl = response.secure_url;
+        await update(ref(db, `users/${userId}`), { profileImage: imageUrl });
+        if (user) await updateProfile(user, { photoURL: imageUrl });
+
+        setUserData((prev) => ({ ...prev, profileImage: imageUrl }));
+
+        Toast.show({
+          type: "success",
+          text1: "Profile picture updated!",
+        });
+      }
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Top Row */}
+      {/* Header Row */}
       <View style={styles.topRow}>
-        <BackButton onPress={onBackPress} />
-        <TouchableOpacity onPress={goToSettings}>
+        <BackButton onPress={() => router.back()} />
+        <TouchableOpacity onPress={() => router.push("/Setting")}>
           <Ionicons name="settings-outline" size={26} color={colors.text} />
         </TouchableOpacity>
       </View>
 
       {/* Header */}
       <View style={styles.header}>
-        <Image
-          source={require("@/assets/images/profile_pic.jpg")}
-          style={[styles.profileImage, { borderColor: colors.primary }]}
-        />
-        <Text style={[styles.name, { color: colors.text }]}>{name}</Text>
-        <Text
-          style={[styles.email, { color: colors.text, opacity: 0.6 }]}
-        >
-          {email}
+        <TouchableOpacity onPress={handleImageUpload}>
+          <Image
+            source={
+              userData.profileImage
+                ? { uri: userData.profileImage }
+                : require("@/assets/images/profile_pic.jpg")
+            }
+            style={[styles.profileImage, { borderColor: colors.primary }]}
+          />
+        </TouchableOpacity>
+
+        <Text style={[styles.name, { color: colors.text }]}>{userData.name}</Text>
+        <Text style={[styles.email, { color: colors.text, opacity: 0.6 }]}>
+          {userData.email}
         </Text>
 
         <TouchableOpacity
-          onPress={handleEditToggle}
+          onPress={() => setIsEditing(!isEditing)}
           style={[styles.editButton, { borderColor: colors.primary }]}
         >
           <Ionicons
@@ -85,31 +203,24 @@ export default function ProfileScreen() {
       </View>
 
       {/* Details */}
-      <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
-        <ScrollView style={styles.detailsContainer}>
-          {[ 
-            { label: "Full Name", value: name, key: "name" },
-            { label: "Email Address", value: email, key: "email" },
-            { label: "Phone Number", value: phone, key: "phone" },
-            { label: "Address", value: address, key: "address" },
-          ].map((field) => (
+      <ScrollView style={styles.detailsContainer}>
+        {(Object.keys(userData) as (keyof UserData)[]).map((field) =>
+          field !== "profileImage" ? (
             <TouchableOpacity
-              key={field.key}
+              key={field}
               style={[
                 styles.inputGroup,
                 { backgroundColor: colors.card, borderColor: colors.border },
               ]}
-              onPress={() =>
-                isEditing && handleFieldEdit(field.key, field.value)
-              }
+              onPress={() => isEditing && handleFieldEdit(field, userData[field])}
               disabled={!isEditing}
             >
               <Text style={[styles.label, { color: colors.text, opacity: 0.6 }]}>
-                {field.label}
+                {field.charAt(0).toUpperCase() + field.slice(1)}
               </Text>
               <View style={styles.fieldContainer}>
                 <Text style={[styles.value, { color: colors.text }]}>
-                  {field.value}
+                  {userData[field] || "Not set"}
                 </Text>
                 {isEditing && (
                   <Ionicons
@@ -121,42 +232,11 @@ export default function ProfileScreen() {
                 )}
               </View>
             </TouchableOpacity>
-          ))}
+          ) : null
+        )}
+      </ScrollView>
 
-          {/* Recent Orders */}
-          <View style={styles.orderSection}>
-            <Text style={[styles.orderHeader, { color: colors.text }]}>
-              Recent Orders
-            </Text>
-            {orders.length === 0 ? (
-              <Text style={[styles.noOrders, { color: colors.text, opacity: 0.6 }]}>
-                No orders yet.
-              </Text>
-            ) : (
-              orders.map((order) => (
-                <View
-                  key={order.id}
-                  style={[
-                    styles.orderItem,
-                    { backgroundColor: colors.card, borderColor: colors.border },
-                  ]}
-                >
-                  <Text style={[styles.orderText, { color: colors.text }]}>
-                    {order.deliveryOption} — €
-                  </Text>
-                  <Text
-                    style={[styles.orderDate, { color: colors.text, opacity: 0.7 }]}
-                  >
-                    {order.date}
-                  </Text>
-                </View>
-              ))
-            )}
-          </View>
-        </ScrollView>
-      </Animated.View>
-
-      {/* Modal for Editing */}
+      {/* Floating Edit Modal */}
       <Modal visible={modalVisible} transparent animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
@@ -190,6 +270,8 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      <Toast />
     </View>
   );
 }
@@ -231,17 +313,6 @@ const styles = StyleSheet.create({
   label: { fontSize: 14, marginBottom: 4 },
   value: { fontSize: 16 },
   fieldContainer: { flexDirection: "row", alignItems: "center" },
-  orderSection: { marginTop: 30 },
-  orderHeader: { fontSize: 18, fontWeight: "700" },
-  noOrders: { fontSize: 14 },
-  orderItem: {
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 8,
-  },
-  orderText: { fontSize: 16 },
-  orderDate: { fontSize: 12 },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.6)",

@@ -1,6 +1,7 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps, getApp } from "firebase/app";
 import { getStorage } from "firebase/storage";
 import { getAuth } from "firebase/auth";
+import { getDatabase, ref, set, get, update } from "firebase/database";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -9,6 +10,7 @@ import { getAuth } from "firebase/auth";
 const firebaseConfig = {
   apiKey: "AIzaSyDkUDpnegqLjD0gwwxML1X5eByvqaQFLRI",
   authDomain: "deliveryapp-b8afa.firebaseapp.com",
+  databaseURL: "https://deliveryapp-b8afa-default-rtdb.firebaseio.com/",
   projectId: "deliveryapp-b8afa",
   storageBucket: "deliveryapp-b8afa.firebasestorage.app",
   messagingSenderId: "733413278573",
@@ -17,10 +19,10 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // ✅ Export storage for uploads
 export const storage = getStorage(app);
 export default app;
-
 export const auth = getAuth(app);
+export const db = getDatabase(app);

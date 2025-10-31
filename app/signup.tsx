@@ -1,9 +1,17 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+} from "react-native";
 import { useTheme } from "@/assets/context/ThemeContext";
 import { router } from "expo-router";
-import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/backend/config/firebaseConfig";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { auth, db } from "@/backend/config/firebaseConfig";
+import { ref, set } from "firebase/database";
 
 export default function SignupScreen() {
   const { colors, theme } = useTheme();
@@ -13,11 +21,40 @@ export default function SignupScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleSignup = async () => {
+    if (!name || !email || !password) {
+      Alert.alert("Error", "Please fill in all fields");
+      return;
+    }
+
     try {
       setLoading(true);
-      await createUserWithEmailAndPassword(auth, email, password);
+
+      // ✅ Create user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+      const user = userCredential.user;
+
+      // ✅ Update Firebase Auth profile (displayName)
+      await updateProfile(user, {
+        displayName: name,
+      });
+
+      // ✅ Store user details in Realtime Database
+      const userRef = ref(db, `users/${user.uid}`);
+      await set(userRef, {
+        name,
+        email,
+        profileImage: "",
+        phone: "",
+        address: "",
+        createdAt: new Date().toISOString(),
+      });
+
       Alert.alert("Success", "Account created successfully!");
-      router.replace("/");
+      router.replace("/"); // Redirect to home or login
     } catch (error: any) {
       console.error(error);
       Alert.alert("Signup Failed", error.message);
@@ -46,6 +83,7 @@ export default function SignupScreen() {
         placeholderTextColor={theme === "dark" ? "#aaa" : "#888"}
         value={email}
         onChangeText={setEmail}
+        keyboardType="email-address"
       />
       <TextInput
         style={[styles.input, { backgroundColor: colors.card, color: colors.text }]}
