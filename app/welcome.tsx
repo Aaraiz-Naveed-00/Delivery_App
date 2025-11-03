@@ -81,7 +81,7 @@ export default function Index() {
 
           <TouchableOpacity
             style={styles.dismiss}
-            onPress={() => router.replace("/(tabs)/(home)")}
+            onPress={() => router.replace("/SplashScreen")}
           >
             <Text style={[styles.dismissText, { color: theme === "dark" ? "#A1A1AA" : "#9586A8" }]}>
               DISMISS

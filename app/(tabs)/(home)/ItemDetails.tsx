@@ -46,7 +46,7 @@ export default function ItemDetails() {
       try {
         setLoading(true);
         const res = await axios.get<Product>(
-          `http://192.168.18.71:5000/api/products/id/${_id}`
+          `http://192.168.18.73:5000/api/products/id/${_id}`
         );
         setProduct(res.data);
       } catch (error) {
