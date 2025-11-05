@@ -25,9 +25,8 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.anonymous.Delivery_App"
-
-      
+      "package": "com.anonymous.Delivery_App",
+      "googleServicesFile": "./android/app/google-services.json"
     },
     
     "web": {

@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from "react";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  Image,
-  Alert,
-  ScrollView,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
-import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
-import axios from "axios";
-import { Picker } from "@react-native-picker/picker";
 import { useTheme } from "@/assets/context/ThemeContext";
+import { Picker } from "@react-native-picker/picker";
+import axios from "axios";
+import * as FileSystem from "expo-file-system";
+import * as ImagePicker from "expo-image-picker";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 // ✅ Backend API Base URL
-const API_BASE = "http://192.168.18.71:5000/api";
+const API_BASE = "http://192.168.18.73:5000/api";
 
 // ✅ Cloudinary Credentials
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/duqffmi9a/image/upload";
