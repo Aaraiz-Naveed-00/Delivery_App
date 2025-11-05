@@ -9,6 +9,11 @@ export default ({ config }) => ({
     ...appJson.expo,
     name: "Delivery_App",
     slug: "Delivery_App",
+    android: {
+      ...appJson.expo.android,
+      // Use EAS file env var in CI; fallback to local path for dev
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./android/app/google-services.json",
+    },
     extra: {
       ...appJson.expo.extra,
       eas: {
