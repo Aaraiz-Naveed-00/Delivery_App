@@ -11,8 +11,8 @@ export default ({ config }) => ({
     slug: "Delivery_App",
     android: {
       ...appJson.expo.android,
-      // Use EAS file env var in CI; fallback to local path for dev
-      googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./android/app/google-services.json",
+      // Always point to the materialized file; pre-install script creates it from secrets
+      googleServicesFile: "./android/app/google-services.json",
     },
     extra: {
       ...appJson.expo.extra,
