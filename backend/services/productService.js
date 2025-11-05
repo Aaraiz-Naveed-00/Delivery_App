@@ -1,5 +1,5 @@
 import Product from "../models/product.js";
-import { sendNotificationToTopic } from "./fcmService.js";
+import { sendExpoNotificationToAllUsers } from "./expoNotificationService.js";
 
 // ✅ Filter products (supports categoryId, mainCategory, subCategory, search)
 export const filterProducts = async ({ categoryId, mainCategory, subCategory, search }) => {
@@ -27,9 +27,8 @@ export const getProductById = async (id) => {
   return product;
 };
 
-// ✅ Add new product + send FCM notification
+// ✅ Add new product + send Expo push notification
 export const addProduct = async (productData) => {
-  // Destructure for clarity and ensure defaults
   const {
     name,
     price,
@@ -41,10 +40,8 @@ export const addProduct = async (productData) => {
     categoryId,
   } = productData;
 
-  // Basic validation
   if (!name || !price) throw new Error("Name and price are required");
 
-  // Create and save product
   const product = new Product({
     name,
     price,
@@ -58,13 +55,13 @@ export const addProduct = async (productData) => {
 
   await product.save();
 
-  // Send FCM notification (optional)
-  const fcmMessageId = await sendNotificationToTopic(
+  // ✅ Send Expo push notification to all users
+  const notificationResponse = await sendExpoNotificationToAllUsers(
     "🆕 New Product Added!",
     `${product.name} has been added to the store.`
   );
 
-  return { product, fcmMessageId };
+  return { product, notificationResponse };
 };
 
 // ✅ Delete single product

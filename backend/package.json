@@ -20,6 +20,7 @@
     "expo-device": "~8.0.9",
     "expo-notifications": "~0.32.12",
     "expo-permissions": "^14.4.0",
+    "expo-server-sdk": "^4.0.0",
     "express": "^5.1.0",
     "firebase": "^12.4.0",
     "firebase-admin": "^13.5.0",

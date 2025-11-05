@@ -153,7 +153,7 @@ export default function Index() {
     return (
       <View style={styles.loaderContainer}>
         <LottieView
-          source={require("@/assets/animatoions/Loading.json")}
+          source={require("@/assets/animations/Loading.json")}
           autoPlay
           loop
           style={{ width: 200, height: 200 }}
