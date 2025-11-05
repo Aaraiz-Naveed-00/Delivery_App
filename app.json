@@ -32,7 +32,10 @@
     
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "push": {
+        "vapidPublicKey": "BI5Ti3yMs8APLDqQHg8nyVNkjav2LHcxzCcjaKgyQIWv_6uzMGkurAHKvCBSY3RoabDviCoqbue3meBejo6TyZQ"
+      }
     },
     "plugins": [
       "expo-router",
@@ -66,9 +69,6 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    },
-    "notification": {
-      "vapidPublicKey": "BI5Ti3yMs8APLDqQHg8nyVNkjav2LHcxzCcjaKgyQIWv_6uzMGkurAHKvCBSY3RoabDviCoqbue3meBejo6TyZQ"
     },
     "extra": {
       "eas": {
