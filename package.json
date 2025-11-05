@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "expo lint",
     "postinstall": "patch-package",
-    "eas-build-pre-install": "node ./scripts/setup-google-services.js"
+    "eas-build-pre-install": "node ./scripts/google-services.js"
   },
   "overrides": {
     "react-native": "0.81.5"

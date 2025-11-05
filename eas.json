@@ -8,10 +8,6 @@
         "GOOGLE_SERVICES_JSON_BASE64": "@GOOGLE_SERVICES_JSON_BASE64"
       }
     },
-    "hooks": {
-      "prebuild": "node scripts/create-google-services-json.js"
-    },
- 
     "preview": {
       "android": {
         "buildType": "apk"
@@ -33,8 +29,7 @@
         "image": "latest"
       }
     }
-  }
-  ,
+  },
   "cli": {
     "appVersionSource": "remote"
   }
