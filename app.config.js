@@ -11,8 +11,8 @@ export default ({ config }) => ({
     slug: "Delivery_App",
     android: {
       ...appJson.expo.android,
-      // Always point to the materialized file; pre-install script creates it from secrets
-      googleServicesFile: "./android/app/google-services.json",
+      // Use ONLY the EAS file-secret path. Do not rely on a local file path.
+      googleServicesFile: process.env.GOOGLE_SERVICES_JSON,
     },
     extra: {
       ...appJson.expo.extra,
