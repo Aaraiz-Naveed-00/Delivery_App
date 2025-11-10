@@ -1,24 +1,26 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-  ScrollView,
-  StyleSheet,
-  Image,
-  SafeAreaView,
-  Dimensions,
-  KeyboardAvoidingView,
-  Platform,
-} from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import CustomYesNoSwitch from '@/assets/components/CustomYesNoSwitch';
 import { useCart } from '@/assets/context/CartContect';
 import { useProfile } from '@/assets/context/ProfileContext';
-import CustomYesNoSwitch from '@/assets/components/CustomYesNoSwitch';
 import { useTheme } from '@/assets/context/ThemeContext';
+import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
+import * as Notifications from 'expo-notifications';
+import { router, useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import {
+  Dimensions,
+  Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -87,7 +89,7 @@ export default function Checkout() {
     return `${addr.fullName}\n${addr.street}\n${addr.city}\n${addr.postalCode}\n${addr.country}`;
   };
 
-  const handlePayNow = () => {
+  const handlePayNow = async () => {
     if (!payment || !address || !deliveryOption) {
       alert('Please fill all fields before proceeding.');
       return;
@@ -105,6 +107,8 @@ export default function Checkout() {
     };
 
     addOrder(newOrder);
+    // Send an order confirmation push (await to improve reliability)
+    try { await sendOrderConfirmationPush(); } catch {}
     clearCart();
     alert('Payment Successful! Your order has been added.');
     // Navigate back to cart screen which will show empty cart
@@ -145,6 +149,52 @@ export default function Checkout() {
       icon: require('@/assets/images/Drone.png'),
     },
   ];
+
+  // ---------------- PUSH: ORDER CONFIRMATION ----------------
+  const getProjectId = () => (Constants?.expoConfig?.extra as any)?.eas?.projectId || '';
+
+  const getExpoToken = async (): Promise<string | null> => {
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') return null;
+      const projectId = getProjectId();
+      const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+      return token;
+    } catch {
+      return null;
+    }
+  };
+
+  const sendOrderConfirmationPush = async () => {
+    const token = await getExpoToken();
+    if (!token) return;
+    try {
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify([
+          {
+            to: token,
+            sound: 'default',
+            title: 'Order Confirmed',
+            body: 'Your order has been confirmed and is being processed.',
+            data: { type: 'order_confirmed' },
+          },
+        ]),
+      });
+    } catch {
+      // ignore push errors
+    }
+  };
 
   // Dynamic styles based on theme
   const dynamicStyles = StyleSheet.create({

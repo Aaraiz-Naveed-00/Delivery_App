@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from "react";
-import { Animated, StyleSheet, View, Text, Dimensions, Easing } from "react-native";
+import { router } from "expo-router";
 import LottieView from "lottie-react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Dimensions, Easing, StyleSheet, View } from "react-native";
 
 const { width } = Dimensions.get("window");
 
@@ -67,6 +68,7 @@ const SplashScreen = ({ onFinish }: { onFinish?: () => void }) => {
     const timer = setTimeout(() => {
       pulseAnim.stop();
       if (onFinish) onFinish();
+      else router.replace("/welcome");
     }, 4000);
 
     return () => {

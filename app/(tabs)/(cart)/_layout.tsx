@@ -5,7 +5,6 @@ export default function CartLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="index" /> {/* Main cart screen */}
       <Stack.Screen name="Checkout" />
-      <Stack.Screen name="PaymentMethod" />
     </Stack>
   );
 }

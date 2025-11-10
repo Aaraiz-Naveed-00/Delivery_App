@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import MyButton from "../assets/components/MyButton";
 import { router } from "expo-router";
+import { ScreenFadeSlide } from "@/assets/components/animations";
 import { useTheme } from "../assets/context/ThemeContext"; // ✅ Import Theme Context
 
 
@@ -36,12 +37,15 @@ export default function Index() {
         style={styles.background}
       >
         {/* Logo */}
-        <Image
-          source={require("../assets/images/logo.png")}
-          style={styles.logo}
-        />
+        <ScreenFadeSlide>
+          <Image
+            source={require("../assets/images/logo.png")}
+            style={styles.logo}
+          />
+        </ScreenFadeSlide>
 
         {/* Bottom Card Section */}
+        <ScreenFadeSlide durationMs={500}>
         <View
           style={[
             styles.subcontainer,
@@ -77,7 +81,9 @@ export default function Index() {
             your order at the door.
           </Text>
 
-          <MyButton title="ORDER NOW" onPress={onOrderClick} />
+          <ScreenFadeSlide durationMs={550}>
+            <MyButton title="ORDER NOW" onPress={onOrderClick} />
+          </ScreenFadeSlide>
 
           <TouchableOpacity
             style={styles.dismiss}
@@ -88,6 +94,7 @@ export default function Index() {
             </Text>
           </TouchableOpacity>
         </View>
+        </ScreenFadeSlide>
       </ImageBackground>
     </View>
   );

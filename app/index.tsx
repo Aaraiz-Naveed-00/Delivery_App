@@ -1,32 +1,33 @@
-import React, { useState, useEffect } from "react";
+import { ScreenFadeSlide } from "@/assets/components/animations";
+import { useTheme } from "@/assets/context/ThemeContext";
+import { auth } from "@/backend/config/firebaseConfig";
+import * as AuthSession from "expo-auth-session";
+import * as Facebook from "expo-auth-session/providers/facebook";
+import * as Google from "expo-auth-session/providers/google";
+import Constants from "expo-constants";
+import { router } from "expo-router";
+import * as WebBrowser from "expo-web-browser";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ToastAndroid,
+  FacebookAuthProvider,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+} from "firebase/auth";
+import LottieView from "lottie-react-native";
+import React, { useEffect, useState } from "react";
+import {
   ActivityIndicator,
   Image,
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  ToastAndroid,
+  TouchableOpacity,
+  View,
 } from "react-native";
-import { useTheme } from "@/assets/context/ThemeContext";
-import { router } from "expo-router";
-import {
-  signInWithEmailAndPassword,
-  signInWithCredential,
-  GoogleAuthProvider,
-  FacebookAuthProvider,
-  onAuthStateChanged,
-} from "firebase/auth";
-import * as WebBrowser from "expo-web-browser";
-import * as AuthSession from "expo-auth-session";
-import * as Google from "expo-auth-session/providers/google";
-import * as Facebook from "expo-auth-session/providers/facebook";
-import LottieView from "lottie-react-native";
-import { auth } from "@/backend/config/firebaseConfig";
-import Constants from "expo-constants";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -53,11 +54,15 @@ export default function Index() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showLoader, setShowLoader] = useState(false);
+  const hasRoutedRef = React.useRef(false);
 
   // ✅ Redirect if user already logged in
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (user) router.replace("/welcome");
+      if (user && !hasRoutedRef.current) {
+        hasRoutedRef.current = true;
+        router.replace("/welcome");
+      }
     });
     return unsubscribe;
   }, []);
@@ -119,7 +124,10 @@ export default function Index() {
     setShowLoader(true);
     setTimeout(() => {
       setShowLoader(false);
-      router.replace("/welcome");
+      if (!hasRoutedRef.current) {
+        hasRoutedRef.current = true;
+        router.replace("/welcome");
+      }
     }, 1500);
   };
 
@@ -170,11 +178,14 @@ export default function Index() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={[styles.container, { backgroundColor: colors.background }]}
     >
-      <Text style={[styles.title, { color: colors.text }]}>Welcome Back 👋</Text>
-      <Text style={[styles.subtitle, { color: colors.text }]}>
-        Log in to continue shopping
-      </Text>
+      <ScreenFadeSlide durationMs={450}>
+        <Text style={[styles.title, { color: colors.text }]}>Welcome Back 👋</Text>
+        <Text style={[styles.subtitle, { color: colors.text }]}> 
+          Log in to continue shopping
+        </Text>
+      </ScreenFadeSlide>
 
+      <ScreenFadeSlide durationMs={500}>
       <View style={styles.form}>
         <TextInput
           style={[
@@ -248,6 +259,7 @@ export default function Index() {
           </Text>
         </TouchableOpacity>
       </View>
+      </ScreenFadeSlide>
     </KeyboardAvoidingView>
   );
 }
